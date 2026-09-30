@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
             item.innerHTML = `
                 <button class="w-full text-left px-5 py-4 font-semibold text-gray-800 hover:bg-[#FFF3EB] flex justify-between items-center transition-colors focus:outline-none">
                     <span class="pr-4 leading-tight article-title-span">${title}</span>
-                    <svg class="chevron w-5 h-5 text-[#FF5000] transform transition-transform duration-200 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="chevron w-5 h-5 text-[#FF0000] transform transition-transform duration-200 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
                 </button>
