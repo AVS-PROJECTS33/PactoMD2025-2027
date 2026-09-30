@@ -26,16 +26,26 @@ body { background-color: #f3f4f6; font-family: 'Inter', system-ui, sans-serif; }
     margin-bottom: 0.5rem;
     margin-left: 1.5rem;
     font-weight: 500;
-    color: #1f2937;
 }
 .lista-letra {
     margin-bottom: 0.25rem;
     margin-left: 3rem;
-    color: #4b5563;
 }
 .articulo-titulo {
     font-weight: 700;
     margin-top: 1.5rem;
     margin-bottom: 1rem;
-    color: #111827;
+}
+
+/* Forzar el color del texto para ignorar estilos en línea (inline styles) que rompen el modo claro */
+.content *:not(.highlight) {
+    color: inherit !important;
+}
+
+/* Hacer los bordes de las tablas mucho más visibles en ambos modos */
+.content table, .content th, .content td, .content tr {
+    border-color: #9ca3af !important; /* gris más oscuro para que se vea bien */
+}
+.dark .content table, .dark .content th, .dark .content td, .dark .content tr {
+    border-color: #4b5563 !important;
 }

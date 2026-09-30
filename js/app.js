@@ -52,7 +52,9 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const pattern = escaped.split('').map(char => accentMap[char.toLowerCase()] || char).join('');
-        return new RegExp(`(${pattern})`, 'gi');
+        // (?![^<]*>) evita reemplazar dentro de etiquetas HTML.
+        // Los corchetes simulan un límite de palabra (\b) pero compatible con acentos españoles.
+        return new RegExp(`(?![^<]*>)(^|[^a-zA-Z0-9_áéíóúÁÉÍÓÚñÑüÜ])(${pattern})(?=[^a-zA-Z0-9_áéíóúÁÉÍÓÚñÑüÜ]|$)`, 'gi');
     }
 
     function formatParagraphs(text) {
@@ -110,7 +112,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isEditMode) return;
 
         container.innerHTML = '';
-        const keywords = removeAccents(filter).toLowerCase().split(/\s+/).filter(w => w.length > 1);
+        const stopWords = new Set([
+            'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'lo', 'al', 'del',
+            'a', 'ante', 'bajo', 'cabe', 'con', 'contra', 'de', 'desde', 'en', 'entre', 
+            'hacia', 'hasta', 'para', 'por', 'segun', 'sin', 'so', 'sobre', 'tras',
+            'y', 'e', 'o', 'u', 'ni', 'que', 'pero', 'si', 'como', 'su', 'sus'
+        ]);
+        const keywords = removeAccents(filter).toLowerCase().split(/\s+/)
+            .filter(w => w.length > 1 && !stopWords.has(w));
+        
+        let searchRegex = null;
+        if (keywords.length > 0) {
+            const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            // Permite hasta 3 palabras intermedias entre las palabras clave buscadas
+            const gapPattern = '(?:[^a-z0-9]+[a-z0-9]+){0,3}[^a-z0-9]+';
+            searchRegex = new RegExp(keywords.map(escapeRegExp).join(gapPattern), 'i');
+        }
+
         let foundCount = 0;
 
         parsedArticles.forEach((article, index) => {
@@ -118,8 +136,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const plainText = article.title + " " + article.contentHtml.replace(/<[^>]*>?/gm, '');
             const articleTextNormalized = removeAccents(plainText).toLowerCase();
             
-            // Check if ALL keywords are in the article
-            const isMatch = keywords.length === 0 || keywords.every(kw => articleTextNormalized.includes(kw));
+            // Check if keywords match the ordered pattern with proximity
+            const isMatch = !searchRegex || searchRegex.test(articleTextNormalized);
             if (!isMatch) return;
 
             foundCount++;
@@ -130,10 +148,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (keywords.length > 0) {
                 keywords.forEach(kw => {
                     const regex = createAccentInsensitiveRegex(kw);
-                    // Solo reemplazamos fuera de etiquetas HTML
-                    // Es un reemplazo básico, para evitar romper HTML, no resaltamos si hay match
-                    // Si se rompe, al menos la búsqueda funciona
-                    contentHtml = contentHtml.replace(regex, '[[HIGHLIGHT]]$1[[ENDHIGHLIGHT]]');
+                    // Reemplazamos respetando el caracter previo ($1) y envolviendo la palabra ($2)
+                    contentHtml = contentHtml.replace(regex, '$1[[HIGHLIGHT]]$2[[ENDHIGHLIGHT]]');
                 });
             }
 
@@ -141,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
             contentHtml = contentHtml.replace(/\[\[HIGHLIGHT\]\]/g, '<span class="highlight">').replace(/\[\[ENDHIGHLIGHT\]\]/g, '</span>');
 
             const item = document.createElement('div');
-            item.className = 'article-item bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200 transition-all duration-200';
+            item.className = 'article-item bg-white shadow-sm rounded-lg overflow-hidden border border-gray-300 transition-all duration-200';
             item.dataset.index = index;
             
             item.innerHTML = `
@@ -151,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
                 </button>
-                <div class="content hidden px-5 py-4 border-t border-gray-100 text-gray-700 font-sans text-sm bg-gray-50/50">
+                <div class="content hidden px-5 py-4 border-t border-gray-200 text-gray-700 font-sans text-sm bg-gray-50/50">
                     ${contentHtml}
                 </div>
             `;
@@ -188,6 +204,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     renderArticles();
+
+    const clearSearchBtn = document.getElementById('clear-search-btn');
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', () => {
+            if (isEditMode) return;
+            searchInput.value = '';
+            renderArticles('');
+            searchInput.focus();
+        });
+    }
 
     let timeout = null;
     searchInput.addEventListener('input', (e) => {
